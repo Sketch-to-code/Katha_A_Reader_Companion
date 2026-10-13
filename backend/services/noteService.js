@@ -36,7 +36,7 @@ async function addNote(userId, { documentId, page, highlightedText, body, userEm
   try {
     await sendActivityEmail(userEmail, 'Katha note saved', `You saved a new note on page ${page}: ${body}`);
   } catch (err) {
-    return { ...note, notificationError: err.message };
+    console.warn('[Katha Note Email Notice] Could not send note email:', err.message);
   }
   return note;
 }

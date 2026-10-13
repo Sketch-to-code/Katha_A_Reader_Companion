@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:integration": "node --test tests/",
+    "test:mutation": "npx stryker run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

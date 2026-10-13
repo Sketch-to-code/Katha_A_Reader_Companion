@@ -2,38 +2,42 @@
 
 > Turn any PDF into an immersive, AI-assisted reading experience.
 
-Katha transforms static PDF documents — novels, textbooks, research papers — into an interactive, book-like reading experience. Read leisurely with a flippable book UI and ambient soundscapes, or switch to Academic Mode where an AI assistant summarizes, explains, and narrates content on demand.
+Katha transforms static PDF documents — novels, textbooks, research papers — into an interactive, book-like reading experience. Read leisurely with continuous-scroll PDF rendering and ambient soundscapes, or switch to Academic Mode where an AI assistant summarizes, explains, and narrates content on demand.
 
 ---
 
 ## ✨ Features
 
 ### Core Reading Experience
-- 📖 **Flippable book UI** — PDFs rendered as a realistic page-turning book (toggle to continuous scroll mode)
-- 🔍 **Zoom controls** — auto-fit on load, manual zoom in/out
+- 📄 **PDF.js canvas rendering** — each page rendered precisely to canvas with real text selection; no iframes, no content clipping
+- 📜 **Continuous scroll** — scroll through all pages in one fluid view; page counter updates live as you scroll
+- ✎ **Text selection toggle** — switch between Scroll mode (two-finger scroll updates page counter) and Select text mode (highlight and copy PDF text)
 - 🖼️ **Auto-generated cover page** — automatically creates a cover with the document title when the source PDF doesn't have one
 - 🔖 **Bookmarks** — save and jump back to any page, persisted per user
-- 📝 **Notes** — attach written notes to specific pages or highlighted passages
-- ⏯️ **Resume reading** — automatically picks up where you left off
-- 🎨 **Themes** — light/dark/sepia visual themes
-- 🎵 **Ambient soundscapes** — manually select background audio (rain, ocean, forest, lo-fi, etc.) to set the mood while reading
+- 📝 **Notes** — attach written notes to specific pages or highlighted passages; selected text flows into AI panel automatically
+- ⏯️ **Resume reading** — automatically resumes from your last read page
+- 🎨 **Themes** — light / dark / sepia visual themes
+- 🎵 **Ambient soundscapes** — manually select background audio to set the mood while reading (plays only on explicit user action)
 
 ### Reading Modes
-- 🌿 **Leisure Mode** — a clean, distraction-free interface for novels and casual reading
+- 🌿 **Leisure Mode** — clean, distraction-free interface for novels and casual reading
 - 🎓 **Academic Mode** — keeps an AI assistant on standby for study material
+- 🎧 **Background Music** — choose Rain Drip, Cafe Ambience, Deep Focus Noise, 40 Hz Binaural Beats, Custom Audio upload, or Mute in Settings; audio never auto-plays on load
 
 ### AI Features (Academic Mode)
 - 🧠 **Summarize** — highlight any passage and get a concise AI-generated summary
 - 💡 **Explain Simply** — highlight dense or technical text and get a plain-language explanation
-- 🔊 **AI Chapter Narration (TTS)** — request AI-generated audio narration of the current page or a selected passage, so you can listen instead of read
+- 🌐 **Translate** — translate selected text into Tamil, Spanish, French, Hindi, or Arabic
+- 🔊 **Narration** — prepare a passage with AI and play it using browser speech synthesis, with pause, resume, and stop controls
 
 ---
 
 ## 🛠️ Tech Stack
 
 **Frontend**
-- React (Vite)
-- Supabase signed uploads and private PDF viewing
+- React 18 (Vite)
+- [pdfjs-dist v6](https://mozilla.github.io/pdf.js/) — PDF canvas rendering, text-layer for real text selection, IntersectionObserver-based page tracking
+- Web Audio API — globally generated ambient background music (rain drip, cafe ambience, deep focus noise, 40 Hz binaural beats)
 - Axios
 
 **Backend**
@@ -42,8 +46,7 @@ Katha transforms static PDF documents — novels, textbooks, research papers —
 - JWT sessions with email verification
 
 **AI Layer**
-- OpenRouter summarization, explanation, and retrieval-augmented book chat via a secure backend proxy
-- Text-to-Speech API for on-demand chapter/passage narration
+- OpenRouter summarization, explanation, translation, narration preparation, and retrieval-augmented book chat via a secure backend proxy
 
 **DevOps**
 - Docker + Docker Compose for local development
@@ -54,13 +57,34 @@ Katha transforms static PDF documents — novels, textbooks, research papers —
 
 ```
 katha/
-├── frontend/          # React app (PDF rendering, flipbook UI, AI panel)
-├── backend/           # Express API (auth, bookmarks, notes, AI proxy, TTS proxy)
+├── frontend/                        # React app
+│   └── src/
+│       ├── components/
+│       │   ├── Reader/
+│       │   │   ├── BookViewer.jsx   # PDF.js canvas viewer + text layer + page counter
+│       │   │   ├── AIPanel.jsx      # AI assist panel (Study mode)
+│       │   │   ├── FlipbookRenderer.jsx  # Strategy: flipbook visual (mock pages)
+│       │   │   └── ScrollRenderer.jsx    # Strategy: scroll visual (mock pages)
+│       │   ├── Layout/
+│       │   ├── Auth/
+│       │   ├── Notes/
+│       │   └── Settings/
+│       ├── context/
+│       │   ├── BackgroundMusicContext.jsx  # Web Audio API soundscape engine
+│       │   ├── AuthContext.jsx
+│       │   └── ToastContext.jsx
+│       └── strategies/
+│           └── renderStrategies.jsx    # Strategy pattern: maps mode → renderer
+├── backend/                         # Express API
 │   ├── controllers/
 │   ├── models/
 │   ├── routes/
 │   ├── middleware/
-│   └── services/      # AI summarization + TTS integration
+│   └── services/
+│       ├── aiProvider/              # Adapter pattern: OpenRouter / Mock LLM
+│       ├── events/                  # Observer: readingProgressEmitter
+│       ├── factories/               # Factory Method: CoverFactory, SoundscapeFactory
+│       └── AcademicModeFacade.js    # Facade: one call covers summarise/explain/translate
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -74,8 +98,7 @@ katha/
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - Node.js 22+ (optional, only needed for non-Docker local dev)
 - A Supabase project with the backend service-role key
-- An LLM API key (for summarize/explain)
-- A TTS API key (for chapter narration)
+- An OpenRouter API key for AI assistance and translations
 
 ### Run with Docker (recommended)
 
@@ -83,7 +106,8 @@ katha/
 git clone <repository-url>
 cd katha
 cp backend/.env.example backend/.env
-# fill in Supabase, Resend, JWT, and OpenRouter settings in backend/.env
+# Configure Supabase, JWT, email, and AI settings in backend/.env.
+cp frontend/.env.example frontend/.env.local
 docker-compose up --build
 ```
 
@@ -140,34 +164,23 @@ All persisted account, document, note, bookmark, and login-challenge data use Su
 
 AI uses OpenRouter when `USE_MOCK_AI=false`; set `OPENROUTER_API_KEY` in the backend environment to enable responses. The database and private file storage use Supabase, while mail notifications use Resend; follow the setup section below before using cloud features.
 
-## 🚀 Quick Start — Local Development
-
-```bash
-git clone <repository-url>
-cd katha
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.local
-
-# Backend
-cd backend && npm install && npm run dev   # http://localhost:8081
-
-# Frontend (new terminal)
-cd frontend && npm install && npm run dev  # http://localhost:3000
-```
-
-Or with Docker: `docker-compose up --build`.
+---
 
 ## 🗺️ Roadmap
 
-- [x] PDF upload + flipbook rendering
+- [x] PDF upload + canvas rendering (PDF.js)
+- [x] Continuous scroll with live page counter (IntersectionObserver)
+- [x] Text selection mode toggle (scroll ↔ select)
+- [x] Resume from last read page
 - [x] Bookmarks & auto-cover generation
-- [x] Book- and page-associated notes
-- [x] Zoom controls
+- [x] Book- and page-associated notes with text highlight capture
 - [x] Leisure / Academic mode toggle
 - [x] AI summarize & explain
+- [x] Passage translation
+- [x] Global background music settings (explicit play only — no autoplay on load)
+- [x] Passage narration with pause / resume / stop
 - [x] OpenRouter retrieval-augmented PDF chat
 - [x] Email login verification and activity notifications
-- [ ] AI chapter narration (TTS)
 - [ ] Docker Compose full stack
 - [ ] OCR support for scanned PDFs *(future)*
 - [ ] Read-along synced-highlight narration *(future)*
@@ -186,7 +199,9 @@ Or with Docker: `docker-compose up --build`.
 
 This project is developed as part of an academic Software Engineering course assignment.
 
-## Supabase, Resend, and OpenRouter setup
+---
+
+## Supabase, Resend, and OpenRouter Setup
 
 1. In the Supabase dashboard, open **SQL Editor → New query**, paste all of `backend/db/supabase-schema.sql`, and run it. It creates the `users`, `documents`, `notes`, `bookmarks`, and `login_challenges` tables plus a private `pdf-documents` Storage bucket. The script does not drop or rename existing tables. `CREATE TABLE IF NOT EXISTS` will not alter a pre-existing incompatible table; the backend checks required columns at startup and refuses to serve requests with a clear error if they do not match. Do not drop/rename old `profiles`, `books`, `notes`, or `bookmarks` tables to silence a mismatch; inspect and back up the actual schema first.
 2. Copy `backend/.env.example` to `backend/.env`. Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `PDF_BUCKET` (normally `pdf-documents`) from your project settings/configuration. Keep the service-role key on the backend only; never put it in a `VITE_` variable, commit it, or share it.

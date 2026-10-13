@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppShell from './components/Layout/AppShell';
 import LibraryGrid from './components/Library/LibraryGrid';
 import BookViewer from './components/Reader/BookViewer';
@@ -9,6 +9,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { ReadingEventProvider } from './context/ReadingEventContext';
 import { BackgroundMusicProvider } from './context/BackgroundMusicContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import LoginView from './components/Auth/LoginView';
 
 export default function App() {
@@ -16,9 +17,13 @@ export default function App() {
     <ThemeProvider>
       <BackgroundMusicProvider>
         <AuthProvider>
-          <ReadingEventProvider>
-            <AppRoutes />
-          </ReadingEventProvider>
+          <ToastProvider>
+            <ReadingEventProvider>
+              <BrowserRouter>
+                <AppRoutes />
+              </BrowserRouter>
+            </ReadingEventProvider>
+          </ToastProvider>
         </AuthProvider>
       </BackgroundMusicProvider>
     </ThemeProvider>
@@ -30,16 +35,15 @@ function AppRoutes() {
   if (!user) return <LoginView />;
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route path="/" element={<LibraryGrid />} />
-          <Route path="/read/:id" element={<BookViewer />} />
-          <Route path="/bookmarks" element={<BookmarksPanel />} />
-          <Route path="/notes" element={<NotesPanel />} />
-          <Route path="/settings" element={<SettingsPanel />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route path="/" element={<LibraryGrid />} />
+        <Route path="/read/:id" element={<BookViewer />} />
+        <Route path="/bookmarks" element={<BookmarksPanel />} />
+        <Route path="/notes" element={<NotesPanel />} />
+        <Route path="/settings" element={<SettingsPanel />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
   );
 }

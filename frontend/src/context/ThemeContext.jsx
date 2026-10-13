@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => localStorage.getItem('katha_theme') || 'sepia');
+  const [theme, setTheme] = useState(() => localStorage.getItem('katha_theme') || 'dark');
   const [readingMode, setReadingMode] = useState(
     () => localStorage.getItem('katha_reading_mode') || 'leisure'
   );

@@ -97,13 +97,13 @@ class OpenRouterAdapter extends AIProvider {
       err.status = 502;
       throw err;
     }
-    if (result === text.trim()) {
-      const err = new Error('The AI provider returned the source text unchanged instead of a translation.');
+    if (targetLanguage === 'Tamil' && !/[\u0B80-\u0BFF]/u.test(result)) {
+      const err = new Error('The AI provider did not return a Tamil-script translation. Please try again.');
       err.status = 502;
       throw err;
     }
-    if (targetLanguage === 'Tamil' && !/[\u0B80-\u0BFF]/u.test(result)) {
-      const err = new Error('The AI provider did not return a Tamil-script translation. Please try again.');
+    if (result === text.trim()) {
+      const err = new Error('The AI provider returned the source text unchanged instead of a translation.');
       err.status = 502;
       throw err;
     }

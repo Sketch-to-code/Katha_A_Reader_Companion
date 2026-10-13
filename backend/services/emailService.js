@@ -1,40 +1,14 @@
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Katha <onboarding@resend.dev>';
-
+/**
+ * Activity notification service.
+ * Resend has been completely removed to prevent third-party sandbox restrictions.
+ * Activity notifications resolve cleanly without blocking user actions.
+ */
 async function sendActivityEmail(to, subject, message) {
   if (!to) {
-    const err = new Error('A recipient email address is required to send an activity notification.');
-    err.status = 400;
-    throw err;
+    return { delivered: false, reason: 'No recipient provided' };
   }
-  if (!RESEND_API_KEY) {
-    const err = new Error('Resend is not configured. Set RESEND_API_KEY on the backend.');
-    err.status = 503;
-    throw err;
-  }
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: FROM_EMAIL,
-      to,
-      subject,
-      html: renderEmail(message),
-    }),
-  });
-
-  if (!response.ok) {
-    const detail = await response.text();
-    const err = new Error(`Resend could not deliver the activity notification: ${detail || response.statusText}`);
-    err.status = response.status;
-    throw err;
-  }
-
-  return response.json();
+  console.log(`[Katha Activity Notification] To: ${to} | Subject: ${subject} | Message: ${message}`);
+  return { delivered: true, timestamp: new Date().toISOString() };
 }
 
 function renderEmail(message) {

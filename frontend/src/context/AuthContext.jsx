@@ -19,6 +19,57 @@ function getStoredUser() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser);
 
+  const loginWithPassword = async ({ email, password }) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data } = await apiClient.post('/auth/login', {
+      email: normalizedEmail,
+      password,
+    });
+    localStorage.setItem('katha_token', data.token);
+    localStorage.setItem('katha_user_email', data.user.email);
+    localStorage.setItem('katha_user', JSON.stringify(data.user));
+    setUser(data.user);
+    return data.user;
+  };
+
+  const registerUser = async ({ name, email, password }) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data } = await apiClient.post('/auth/register', {
+      name: name.trim(),
+      email: normalizedEmail,
+      password,
+    });
+    if (data?.token && data?.user) {
+      localStorage.setItem('katha_token', data.token);
+      localStorage.setItem('katha_user_email', data.user.email);
+      localStorage.setItem('katha_user', JSON.stringify(data.user));
+      setUser(data.user);
+    }
+    return data;
+  };
+
+  const sendLoginCode = async ({ email, name = 'Reader' }) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data } = await apiClient.post('/auth/email-login', {
+      name: name.trim() || 'Reader',
+      email: normalizedEmail,
+    });
+    return data;
+  };
+
+  const verifyEmailCode = async ({ email, code }) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data } = await apiClient.post('/auth/verify-email', {
+      email: normalizedEmail,
+      code,
+    });
+    localStorage.setItem('katha_token', data.token);
+    localStorage.setItem('katha_user_email', data.user.email);
+    localStorage.setItem('katha_user', JSON.stringify(data.user));
+    setUser(data.user);
+    return data.user;
+  };
+
   const requestLogin = async ({ name, email, password }) => {
     const normalizedEmail = email.trim().toLowerCase();
     try {
@@ -37,17 +88,39 @@ export function AuthProvider({ children }) {
     return normalizedEmail;
   };
 
-  const login = async ({ email, code }) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const { data } = await apiClient.post('/auth/verify-email', {
-      email: normalizedEmail,
-      code,
+  const login = async (credentials) => {
+    if (credentials.code) {
+      return verifyEmailCode(credentials);
+    }
+    return loginWithPassword(credentials);
+  };
+
+  const updateProfile = async ({ name }) => {
+    const cleanName = name.trim();
+    try {
+      const { data } = await apiClient.patch('/auth/profile', { name: cleanName });
+      const updatedUser = { ...user, ...data.user };
+      localStorage.setItem('katha_user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (err) {
+      // If endpoint is not reachable or fallback needed
+      const updatedUser = { ...user, name: cleanName };
+      localStorage.setItem('katha_user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      if (err.response?.status && err.response.status !== 404) {
+        throw err;
+      }
+      return updatedUser;
+    }
+  };
+
+  const changePassword = async ({ currentPassword, newPassword }) => {
+    const { data } = await apiClient.post('/auth/change-password', {
+      currentPassword,
+      newPassword,
     });
-    localStorage.setItem('katha_token', data.token);
-    localStorage.setItem('katha_user_email', data.user.email);
-    localStorage.setItem('katha_user', JSON.stringify(data.user));
-    setUser(data.user);
-    return data.user;
+    return data;
   };
 
   const logout = () => {
@@ -57,7 +130,22 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const value = useMemo(() => ({ user, email: user?.email || null, requestLogin, login, logout }), [user]);
+  const value = useMemo(
+    () => ({
+      user,
+      email: user?.email || null,
+      requestLogin,
+      login,
+      loginWithPassword,
+      registerUser,
+      sendLoginCode,
+      verifyEmailCode,
+      updateProfile,
+      changePassword,
+      logout,
+    }),
+    [user]
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

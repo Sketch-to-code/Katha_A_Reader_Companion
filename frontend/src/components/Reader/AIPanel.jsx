@@ -72,7 +72,6 @@ export default function AIPanel({ documentId, selectedText, onClose }) {
       setMessages((current) => [
         ...current,
         { from: 'bot', text },
-        ...(data.notificationError ? [{ from: 'bot', text: `Email notification could not be delivered: ${data.notificationError}` }] : []),
       ]);
 
       if (mode === 'narrate') {
@@ -146,24 +145,23 @@ export default function AIPanel({ documentId, selectedText, onClose }) {
 
   return (
     <aside
+      className="katha-ai-panel-wrapper"
       style={{
-        width: 'min(420px, calc(100vw - 32px))',
-        marginTop: 18,
-        marginLeft: 'auto',
-        marginRight: 'auto',
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border)',
-        borderRadius: 16,
+        borderRadius: 'var(--radius-xl)',
         overflow: 'hidden',
-        boxShadow: '0 16px 36px rgba(12, 16, 20, 0.18)',
+        boxShadow: '0 16px 36px rgba(0, 0, 0, 0.28)',
       }}
     >
+      {/* Header: fixed at top */}
       <div
         style={{
+          flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '12px 14px',
+          padding: '12px 16px',
           borderBottom: '1px solid var(--border)',
           background: 'linear-gradient(135deg, rgba(212, 180, 89, 0.12), rgba(120, 171, 255, 0.08))',
         }}
@@ -179,8 +177,8 @@ export default function AIPanel({ documentId, selectedText, onClose }) {
             }}
           />
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>Academic AI</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Academic AI</div>
+            <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>
               {pending ? 'Searching your book...' : 'Ask anything about this book'}
             </div>
           </div>
@@ -195,15 +193,18 @@ export default function AIPanel({ documentId, selectedText, onClose }) {
             fontSize: 18,
             cursor: 'pointer',
             lineHeight: 1,
+            padding: 4,
           }}
           aria-label="Close AI panel"
         >
-          x
+          ✕
         </button>
       </div>
 
+      {/* Passage Textarea: compact, resizable vertically only */}
       <label
         style={{
+          flexShrink: 0,
           display: 'grid',
           gap: 6,
           padding: '10px 14px',
@@ -223,42 +224,63 @@ export default function AIPanel({ documentId, selectedText, onClose }) {
             boxSizing: 'border-box',
             resize: 'vertical',
             border: '1px solid var(--border)',
-            borderRadius: 8,
+            borderRadius: 'var(--radius-md)',
             background: 'var(--bg)',
             color: 'var(--text)',
             padding: '8px 10px',
             font: 'inherit',
+            fontSize: 12.5,
           }}
         />
       </label>
 
-      <div style={{ padding: '14px', display: 'grid', gap: 10, maxHeight: 220, overflow: 'auto' }}>
+      {/* Chat Messages: flex 1, scrolls independently */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          padding: '14px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          overflowY: 'auto',
+        }}
+      >
         {messages.map((msg, index) => (
           <div
             key={index}
             style={{
-              maxWidth: '78%',
+              maxWidth: '82%',
               marginLeft: msg.from === 'bot' ? 0 : 'auto',
-              padding: '10px 12px',
-              borderRadius: 12,
+              padding: '10px 14px',
+              borderRadius: msg.from === 'bot' ? '16px 16px 16px 4px' : '16px 16px 4px 16px',
               whiteSpace: 'pre-wrap',
-              background: msg.from === 'bot' ? 'rgba(122, 142, 175, 0.08)' : 'var(--accent)',
+              background: msg.from === 'bot' ? 'rgba(122, 142, 175, 0.1)' : 'var(--accent)',
               color: msg.from === 'bot' ? 'var(--text)' : 'var(--accent-text)',
               fontSize: 12.5,
               lineHeight: 1.5,
+              wordBreak: 'break-word',
             }}
           >
             {msg.text}
           </div>
         ))}
         {error && (
-          <div style={{ fontSize: 11.5, color: '#b24848' }}>
+          <div style={{ fontSize: 11.5, color: '#ef4444' }}>
             {error}
           </div>
         )}
       </div>
 
-      <div style={{ padding: '12px 14px 14px', borderTop: '1px solid var(--border)' }}>
+      {/* Action Area: pinned at the bottom of the panel */}
+      <div
+        style={{
+          flexShrink: 0,
+          padding: '12px 14px 14px',
+          borderTop: '1px solid var(--border)',
+          background: 'var(--bg-elevated)',
+        }}
+      >
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           {[
             ['Summarize', 'summarize'],

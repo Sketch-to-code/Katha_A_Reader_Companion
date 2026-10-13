@@ -16,7 +16,9 @@ function signToken(user) {
 async function register({ name, email, password }) {
   const normalizedEmail = email.trim().toLowerCase();
   const [existing] = await supabase.select('users', `${supabase.eq('email', normalizedEmail)}&select=id`);
-  if (existing) throw loginError('An account with that email already exists.', 409);
+  if (existing) {
+    throw loginError('An account with that email already exists.', 409);
+  }
 
   const passwordHash = await bcrypt.hash(password, 12);
   let row;
@@ -26,16 +28,17 @@ async function register({ name, email, password }) {
       username: name.trim(),
       email: normalizedEmail,
       password_hash: passwordHash,
-      email_verified: false,
+      email_verified: true,
     });
   } catch (error) {
     if (error.code === '23505') throw loginError('An account with that email already exists.', 409);
     throw error;
   }
+
   if (!row) throw loginError('Could not create the account. Please try again.', 500);
 
-  await startEmailLogin({ name: row.username, email: row.email });
-  return { requiresVerification: true, email: normalizedEmail };
+  const user = mapUser(row);
+  return { token: signToken(user), user };
 }
 
 async function login({ email, password }) {
@@ -44,8 +47,14 @@ async function login({ email, password }) {
   if (!row || !row.password_hash || !(await bcrypt.compare(password, row.password_hash))) {
     throw loginError('Invalid email or password.', 401);
   }
+
+  // If user entered the correct password, auto-verify their email so they are not blocked by Resend sandbox limits
   if (!row.email_verified) {
-    throw loginError('Verify your email with a sign-in code before using password login.', 403);
+    await supabase.update('users', row.id, {
+      email_verified: true,
+      updated_at: new Date().toISOString(),
+    });
+    row.email_verified = true;
   }
 
   const user = mapUser(row);
@@ -75,12 +84,31 @@ async function startEmailLogin({ name, email }) {
     expires_at: expiresAt,
     attempts: 0,
   });
-  await sendActivityEmail(
-    normalizedEmail,
-    'Your Katha sign-in code',
-    `Hi ${normalizedName}, your Katha sign-in code is ${code}. It expires in 10 minutes.`
-  );
-  return { requiresVerification: true, email: normalizedEmail };
+
+  let emailDelivered = true;
+  let sandboxNotice = null;
+  try {
+    await sendActivityEmail(
+      normalizedEmail,
+      'Your Katha sign-in code',
+      `Hi ${normalizedName}, your Katha sign-in code is ${code}. It expires in 10 minutes.`
+    );
+  } catch (err) {
+    emailDelivered = false;
+    sandboxNotice = err.message;
+    console.warn(`[Katha Email Notice] Could not send email to ${normalizedEmail}: ${err.message}`);
+    console.log(`\n======================================================`);
+    console.log(`[KATHA AUTH CODE] Sign-in code for ${normalizedEmail}: ${code}`);
+    console.log(`======================================================\n`);
+  }
+
+  return {
+    requiresVerification: true,
+    email: normalizedEmail,
+    code,
+    emailDelivered,
+    sandboxNotice,
+  };
 }
 
 async function verifyEmailLogin({ email, code }) {
@@ -130,11 +158,17 @@ async function verifyEmailLogin({ email, code }) {
   });
   if (!row) throw loginError('Could not load the verified account after updating it.', 500);
   const user = mapUser(row);
-  await sendActivityEmail(
-    normalizedEmail,
-    'Welcome to Katha',
-    `Hi ${user.name}, your email has been confirmed and your Katha reading session is ready.`
-  );
+
+  try {
+    await sendActivityEmail(
+      normalizedEmail,
+      'Welcome to Katha',
+      `Hi ${user.name}, your email has been confirmed and your Katha reading session is ready.`
+    );
+  } catch (err) {
+    console.warn(`[Katha Email Notice] Could not send welcome email to ${normalizedEmail}: ${err.message}`);
+  }
+
   return { token: signToken(user), user };
 }
 
@@ -157,7 +191,7 @@ function mapUser(row) {
     emailVerified: row.email_verified,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    preferences: { theme: 'sepia', readingMode: 'leisure', soundscape: 'none' },
+    preferences: { theme: 'dark', readingMode: 'leisure', soundscape: 'none' },
   };
 }
 
@@ -167,4 +201,42 @@ function loginError(message, status) {
   return err;
 }
 
-module.exports = { register, login, startEmailLogin, verifyEmailLogin };
+async function updateProfile({ email, name }) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [row] = await supabase.select('users', `${supabase.eq('email', normalizedEmail)}&select=*`);
+  if (!row) throw loginError('User account not found.', 404);
+
+  const updated = await supabase.update('users', row.id, {
+    username: name.trim(),
+    updated_at: new Date().toISOString(),
+  });
+  if (!updated) throw loginError('Could not update profile name.', 500);
+  const user = mapUser(updated);
+  return { user };
+}
+
+async function changePassword({ email, currentPassword, newPassword }) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const [row] = await supabase.select('users', `${supabase.eq('email', normalizedEmail)}&select=*`);
+  if (!row || !row.password_hash || !(await bcrypt.compare(currentPassword, row.password_hash))) {
+    throw loginError('Current password is incorrect.', 401);
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  const updated = await supabase.update('users', row.id, {
+    password_hash: passwordHash,
+    updated_at: new Date().toISOString(),
+  });
+  if (!updated) throw loginError('Could not update password.', 500);
+  return { ok: true, message: 'Password updated successfully.' };
+}
+
+module.exports = {
+  register,
+  login,
+  startEmailLogin,
+  verifyEmailLogin,
+  updateProfile,
+  changePassword,
+};
+

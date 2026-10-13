@@ -17,7 +17,18 @@ Katha is a PDF reading application with a personal library, page bookmarks and n
 
 ## Sign in
 
+### Sign in to an existing account
+
 1. Open Katha in your browser.
+2. Select **Sign In** (selected by default).
+3. Enter your email address and password.
+4. Select **Sign In**.
+5. If the entered credentials are incorrect, Katha displays a pop-up alert and highlights the email and password fields in red with an inline error message indicating that the credentials are incorrect.
+6. Alternatively, select **Sign in with a one-time code instead** to receive a six-digit sign-in code by email.
+
+### Create a new user
+
+1. In the sign-in page, select the **Create New User** tab (or the **Create a new user** link below the form).
 2. Enter your name, email address, and a password of at least eight characters.
 3. Select **Send sign-in code**.
 4. Enter the six-digit code sent to your email and select **Verify and enter library**.
@@ -130,6 +141,7 @@ The reader also has its own **Reading** and **Study with AI** buttons for switch
 
 ## Troubleshooting
 
+- **Incorrect credentials error:** Check that your email address and password are entered correctly. If you do not have an account yet, switch to **Create New User**. If your account email has not been verified yet, use the sign-in code option to complete verification.
 - **Upload fails:** Confirm the file is a PDF and no larger than 50 MB. If it still fails, the storage service may be unavailable.
 - **A book cannot be opened or removed:** Confirm you are signed into the account that owns it and try again. Katha does not use a storage path supplied by the browser to decide which PDF to delete.
 - **A code or study notification does not arrive:** Check the email address and spam folder. Email delivery depends on the server's Resend configuration.

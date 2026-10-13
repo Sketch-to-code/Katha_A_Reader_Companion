@@ -1,0 +1,18 @@
+{
+  "testRunner": "command",
+  "commandRunner": { "command": "node --test" },
+  "coverageAnalysis": "off",
+  "mutate": [
+    "middleware/auth.js",
+    "middleware/rateLimiter.js",
+    "services/AcademicModeFacade.js",
+    "services/factories/CoverFactory.js",
+    "services/factories/SoundscapeFactory.js",
+    "services/bookmarkService.js",
+    "services/noteService.js"
+  ],
+  "reporters": ["clear-text", "progress", "html"],
+  "htmlReporter": { "fileName": "reports/mutation/mutation.html" },
+  "thresholds": { "high": 80, "low": 60, "break": null }
+}
+

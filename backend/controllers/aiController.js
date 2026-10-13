@@ -16,7 +16,6 @@ async function assist(req, res, next) {
       });
     }
     const result = await academicMode.assist(text, mode, question, targetLanguage);
-    let notificationError;
     if (mode === 'summarize') {
       try {
         await sendActivityEmail(
@@ -25,10 +24,10 @@ async function assist(req, res, next) {
           'Your academic PDF summary is ready in Katha.'
         );
       } catch (err) {
-        notificationError = err.message;
+        console.warn('[Katha Summary Email Notice] Could not send summary email:', err.message);
       }
     }
-    res.json({ ...result, notificationError });
+    res.json(result);
   } catch (err) {
     err.status = err.status || 400;
     next(err);

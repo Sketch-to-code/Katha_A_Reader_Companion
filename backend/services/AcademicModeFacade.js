@@ -50,4 +50,19 @@ function createProvider() {
   return process.env.USE_MOCK_AI === 'false' ? new OpenRouterAdapter() : new MockLLMAdapter();
 }
 
-module.exports = new AcademicModeFacade();
+const defaultInstance = new AcademicModeFacade();
+
+const facadeExport = new Proxy(AcademicModeFacade, {
+  get(target, prop, receiver) {
+    if (prop in target) {
+      return Reflect.get(target, prop, receiver);
+    }
+    const val = Reflect.get(defaultInstance, prop);
+    return typeof val === 'function' ? val.bind(defaultInstance) : val;
+  },
+  apply(target, thisArg, argList) {
+    return Reflect.apply(target, thisArg, argList);
+  },
+});
+
+module.exports = facadeExport;
