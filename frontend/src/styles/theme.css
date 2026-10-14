@@ -1,0 +1,91 @@
+/*
+  Katha design tokens.
+  Concept: a reading room, not a SaaS dashboard - a book-spine navigation
+  rail, warm page surfaces, and a single leather-red accent instead of the
+  generic terracotta/rounded-card look. Three themes (dark "ink", "sepia",
+  "light") share the same token names so components never branch on theme.
+*/
+
+:root,
+[data-theme='light'] {
+  --bg: #f4f2ec;
+  --bg-elevated: #ffffff;
+  --bg-shelf: #e6e1d2;
+  --text: #211d17;
+  --text-muted: #6d6656;
+  --accent: #7a2e2e;
+  --accent-text: #ffffff;
+  --accent-soft: #f1e0df;
+  --gold: #8a6d2f;
+  --border: #ddd6c3;
+  --shadow: 0 1px 2px rgba(33, 29, 23, 0.08);
+}
+
+[data-theme='sepia'] {
+  --bg: #e7ddc3;
+  --bg-elevated: #f1e9d2;
+  --bg-shelf: #d9cba3;
+  --text: #3b2f22;
+  --text-muted: #7d6c4c;
+  --accent: #8b3a3a;
+  --accent-text: #fbf3e4;
+  --accent-soft: #e6cbc0;
+  --gold: #9c7a2e;
+  --border: #cdbd93;
+  --shadow: 0 1px 2px rgba(59, 47, 34, 0.12);
+}
+
+[data-theme='dark'] {
+  --bg: #14161f;
+  --bg-elevated: #1c1f2b;
+  --bg-shelf: #20232f;
+  --text: #ede6d6;
+  --text-muted: #9b96a8;
+  --accent: #c15a52;
+  --accent-text: #1a1210;
+  --accent-soft: #33222080;
+  --gold: #c9a227;
+  --border: #2a2e3d;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: 'Fraunces', Georgia, serif;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: var(--gold);
+  color: #14161f;
+}

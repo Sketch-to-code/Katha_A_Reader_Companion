@@ -1,20 +1,25 @@
 {
-  "name": "inkloom-backend",
+  "name": "katha-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Katha backend - Express API, AI/TTS proxy, bookmarks & notes",
+  "main": "server.js",
+  "type": "commonjs",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "test": "node --test"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "mongoose": "^8.5.0",
+    "@supabase/supabase-js": "^2.117.3",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
-    "bcryptjs": "^2.4.3"
+    "morgan": "^1.10.0",
+    "pdf-parse": "1.1.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "nodemon": "^1.14.10"
   }
 }
