@@ -1,17 +1,28 @@
-# Node
+
+# Dependencies
 node_modules/
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+frontend/dist/
+frontend/build/
+
+# Logs
+*.log
 npm-debug.log*
 
-# Env
-.env
-.env.local
-
-# Build
-frontend/build/
-frontend/dist/
-
-# OS
+# Operating system files
 .DS_Store
 
-# Docker
-*.log
+# Local editor files
+.vscode/
+
+# Internal and presentation guides
+Katha_SE_Presentation_Guide.md
+USER_GUIDE.md
