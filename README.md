@@ -97,7 +97,6 @@ katha/
 │   │   └── AcademicModeFacade.js    # Facade: unified assist API
 │   ├── tests/                       # 66 backend unit & integration tests
 │   └── stryker.conf.json            # Mutation testing configuration
-├── Katha_SE_Presentation_Guide.md   # Software Engineering presentation guide
 ├── docker-compose.yml
 ├── .env.example
 └── README.md

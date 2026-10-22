@@ -22,3 +22,7 @@ npm-debug.log*
 
 # Local editor files
 .vscode/
+
+# Internal and presentation guides
+Katha_SE_Presentation_Guide.md
+USER_GUIDE.md
