@@ -19,33 +19,32 @@ if (!document.getElementById(TEXT_LAYER_STYLE_ID)) {
   const style = document.createElement('style');
   style.id = TEXT_LAYER_STYLE_ID;
   style.textContent = `
-    .katha-text-layer {
-      position: absolute;
-      inset: 0;
-      overflow: hidden;
-      line-height: 1;
-      /* pointer-events is set via inline style; spans inherit from here.
-         scroll mode: this div = none  → spans inherit none  → events pass through to scroll container
-         select mode: this div = auto  → spans inherit auto  → click/drag selects text */
+    .textLayer.katha-text-layer {
+      z-index: 2;
     }
-    .katha-text-layer > span {
-      color: transparent;
-      position: absolute;
-      white-space: pre;
-      cursor: text;
-      transform-origin: 0% 0%;
-      /* NO pointer-events override — inherits from parent */
+    /* Extend span hit-area vertically so selection highlights form
+       continuous bands instead of tight per-glyph rectangles. */
+    .textLayer.katha-text-layer > :is(span, br),
+    .textLayer.katha-text-layer .markedContent span {
+      padding-top: 1px;
+      padding-bottom: 3px;
+      margin-top: -1px;
+      margin-bottom: -3px;
     }
-    .katha-text-layer ::selection {
-      background: rgba(59, 130, 246, 0.35);
-      color: transparent;
+    .textLayer.katha-text-layer ::selection {
+      background: rgba(59, 130, 246, 0.35) !important;
+      color: transparent !important;
+    }
+    .textLayer.katha-text-layer ::-moz-selection {
+      background: rgba(59, 130, 246, 0.35) !important;
+      color: transparent !important;
     }
   `;
   document.head.appendChild(style);
 }
 
 // ─── Single-page canvas + text layer ─────────────────────────────────────────
-function PdfPage({ pdf, pageNumber, containerWidth, textSelectMode, onHeightChange }) {
+function PdfPage({ pdf, pageNumber, containerWidth, textSelectMode, onHeightChange, zoomLevel = 1 }) {
   const wrapperRef    = useRef(null);
   const canvasRef     = useRef(null);
   const textLayerRef  = useRef(null);
@@ -62,34 +61,65 @@ function PdfPage({ pdf, pageNumber, containerWidth, textSelectMode, onHeightChan
         if (cancelled) return;
 
         const viewport = page.getViewport({ scale: 1 });
-        const scale    = containerWidth > 0 ? containerWidth / viewport.width : 1;
+        const scale    = (containerWidth > 0 ? containerWidth / viewport.width : 1) * zoomLevel;
         const scaled   = page.getViewport({ scale });
+
+        // HiDPI: render the canvas at devicePixelRatio resolution so text
+        // and vector art appear crisp on Retina / high-DPI screens.
+        const dpr = window.devicePixelRatio || 1;
+        const hiDpiViewport = page.getViewport({ scale: scale * dpr });
 
         if (renderTaskRef.current) { renderTaskRef.current.cancel(); renderTaskRef.current = null; }
         if (textRenderRef.current) { textRenderRef.current.cancel?.(); textRenderRef.current = null; }
 
-        // ── Canvas ──────────────────────────────────────────────────────────
+        // -- Canvas --
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
-        canvas.width  = scaled.width;
-        canvas.height = scaled.height;
-        // Report the real CSS height now — VirtualPageList uses this to align
-        // placeholder slots so scrollIntoView(initialPage) lands correctly.
-        onHeightChange?.(scaled.height);
+        // Internal bitmap at full DPR resolution
+        canvas.width  = hiDpiViewport.width;
+        canvas.height = hiDpiViewport.height;
+        // CSS size stays at the layout (non-DPR) size so the canvas is
+        // visually the correct size but internally hi-res.
+        canvas.style.width  = Math.floor(scaled.width) + 'px';
+        canvas.style.height = Math.floor(scaled.height) + 'px';
 
-        const renderTask = page.render({ canvasContext: ctx, viewport: scaled });
+        // Keep wrapper synchronized with the scaled page dimensions
+        if (wrapperRef.current) {
+          wrapperRef.current.style.width  = Math.floor(scaled.width) + 'px';
+          wrapperRef.current.style.height = Math.floor(scaled.height) + 'px';
+        }
+
+        // Report the real CSS height now -- VirtualPageList uses this to align
+        // placeholder slots so scrollIntoView(initialPage) lands correctly.
+        onHeightChange?.(Math.floor(scaled.height));
+
+        const renderTask = page.render({ canvasContext: ctx, viewport: hiDpiViewport });
         renderTaskRef.current = renderTask;
         await renderTask.promise;
         renderTaskRef.current = null;
         if (cancelled) return;
 
-        // ── Text layer (pdfjs v4+ TextLayer class) ──────────────────────────
+        // -- Text layer (pdfjs v6 TextLayer class) --
         const textLayerDiv = textLayerRef.current;
         if (!textLayerDiv) return;
         textLayerDiv.replaceChildren();
-        textLayerDiv.style.width  = scaled.width + 'px';
-        textLayerDiv.style.height = scaled.height + 'px';
+
+        // pdf_viewer.css defines --total-scale-factor only inside the
+        // `.pdfViewer .page` selector, which Katha does not use. Without
+        // this variable the entire font-size / dimension calc chain is
+        // broken, producing wrongly-sized spans and fragmented selection.
+        // Setting all required custom properties here makes the CSS
+        // resolve correctly without needing a .pdfViewer wrapper.
+        textLayerDiv.style.setProperty('--scale-factor', String(scale));
+        textLayerDiv.style.setProperty('--user-unit', '1');
+        textLayerDiv.style.setProperty('--total-scale-factor', String(scale));
+        textLayerDiv.style.setProperty('--scale-round-x', '1px');
+        textLayerDiv.style.setProperty('--scale-round-y', '1px');
+
+        // Do NOT manually set width/height — the TextLayer constructor
+        // calls setLayerDimensions() which sets them via CSS calc using
+        // the custom properties above.
 
         const textLayer = new pdfjsLib.TextLayer({
           textContentSource: page.streamTextContent(),
@@ -112,11 +142,11 @@ function PdfPage({ pdf, pageNumber, containerWidth, textSelectMode, onHeightChan
       if (renderTaskRef.current) { renderTaskRef.current.cancel(); renderTaskRef.current = null; }
       if (textRenderRef.current) { textRenderRef.current.cancel?.(); textRenderRef.current = null; }
     };
-  }, [pdf, pageNumber, containerWidth]); // onHeightChange intentionally omitted (stable ref)
+  }, [pdf, pageNumber, containerWidth, zoomLevel]); // onHeightChange intentionally omitted (stable ref)
 
   return (
-    <div ref={wrapperRef} style={{ position: 'relative', display: 'block', width: '100%' }}>
-      <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: 'auto' }} />
+    <div ref={wrapperRef} style={{ position: 'relative', display: 'block', margin: '0 auto' }}>
+      <canvas ref={canvasRef} style={{ display: 'block' }} />
       {/*
         pointerEvents on this div flows down to spans via CSS inheritance:
           scroll mode  (default) → 'none' → spans don't intercept events → outer scroll works
@@ -124,7 +154,7 @@ function PdfPage({ pdf, pageNumber, containerWidth, textSelectMode, onHeightChan
       */}
       <div
         ref={textLayerRef}
-        className="katha-text-layer"
+        className="textLayer katha-text-layer"
         aria-hidden="true"
         style={{ pointerEvents: textSelectMode ? 'auto' : 'none' }}
       />
@@ -136,7 +166,7 @@ function PdfPage({ pdf, pageNumber, containerWidth, textSelectMode, onHeightChan
 const RENDER_BUFFER = 1; // pages above/below the visible page to keep rendered
 
 const VirtualPageList = forwardRef(function VirtualPageList(
-  { pdf, totalPages, onPageChange, initialPage, containerWidth, textSelectMode },
+  { pdf, totalPages, onPageChange, initialPage, containerWidth, textSelectMode, zoomLevel },
   ref
 ) {
   const slotRefs     = useRef([]);
@@ -218,7 +248,7 @@ const VirtualPageList = forwardRef(function VirtualPageList(
         width: '100%',
         height: '100%',
         overflowY: 'auto',
-        overflowX: 'hidden',
+        overflowX: 'auto',
         padding: '16px 0',
         boxSizing: 'border-box',
         WebkitOverflowScrolling: 'touch',
@@ -234,7 +264,8 @@ const VirtualPageList = forwardRef(function VirtualPageList(
             ref={(el) => { slotRefs.current[p - 1] = el; }}
             data-page={p}
             style={{
-              width: '100%',
+              width: 'fit-content',
+              minWidth: '100%',
               marginBottom: 16,
               background: 'var(--bg-elevated)',
               borderRadius: 'var(--radius-md)',
@@ -254,6 +285,7 @@ const VirtualPageList = forwardRef(function VirtualPageList(
                 pageNumber={p}
                 containerWidth={containerWidth}
                 textSelectMode={textSelectMode}
+                zoomLevel={zoomLevel}
                 // Only report height from initialPage's canvas — one calibration is enough
                 onHeightChange={p === initialPage ? onHeightChange : undefined}
               />
@@ -286,6 +318,7 @@ export default function BookViewer() {
   // false = scroll mode (default): spans are transparent to pointer events, scroll works
   // true  = select mode: spans capture pointer events so text can be highlighted
   const [textSelectMode, setTextSelectMode] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
 
   // PDF.js document instance
   const [pdf, setPdf] = useState(null);
@@ -300,16 +333,32 @@ export default function BookViewer() {
   const progressDebounceRef = useRef(null);
   const virtualListRef = useRef(null);
 
-  // Container width for scale calculation
-  const cardRef = useRef(null);
+  // Container width for scale calculation (using callback ref so it attaches when node mounts)
+  const roRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
+
+  const cardCallbackRef = useCallback((node) => {
+    if (roRef.current) {
+      roRef.current.disconnect();
+      roRef.current = null;
+    }
+    if (node) {
+      const ro = new ResizeObserver(([entry]) => {
+        if (entry && entry.contentRect.width > 0) {
+          // contentRect already excludes padding; subtract small buffer for clean layout
+          const available = Math.max(220, Math.floor(entry.contentRect.width));
+          setContainerWidth(available);
+        }
+      });
+      ro.observe(node);
+      roRef.current = ro;
+    }
+  }, []);
+
   useEffect(() => {
-    if (!cardRef.current) return;
-    const ro = new ResizeObserver(([entry]) => {
-      setContainerWidth(entry.contentRect.width - 32); // subtract horizontal padding
-    });
-    ro.observe(cardRef.current);
-    return () => ro.disconnect();
+    return () => {
+      roRef.current?.disconnect();
+    };
   }, []);
 
   // ── Load book metadata & signed URL ────────────────────────────────────────
@@ -532,7 +581,7 @@ export default function BookViewer() {
 
             {/* ── PDF Card ── */}
             <div
-              ref={cardRef}
+              ref={cardCallbackRef}
               className="katha-pdf-card"
               style={{
                 width: '100%',
@@ -576,6 +625,49 @@ export default function BookViewer() {
                 <span>{textSelectMode ? 'Select text ON' : 'Scroll mode'}</span>
               </button>
 
+              {/* ── Zoom controls ── */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 10,
+                  left: 14,
+                  zIndex: 10,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-pill)',
+                  background: 'var(--bg-elevated)',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
+                  padding: '2px 4px',
+                  userSelect: 'none',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((z) => Math.max(0.4, +(z - 0.1).toFixed(1)))}
+                  title="Zoom out"
+                  style={{ ...zoomBtnStyle }}
+                >
+                  −
+                </button>
+                <span
+                  style={{ fontSize: 11, minWidth: 38, textAlign: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}
+                  title="Reset zoom"
+                  onClick={() => setZoomLevel(1)}
+                >
+                  {Math.round(zoomLevel * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((z) => Math.min(2.0, +(z + 0.1).toFixed(1)))}
+                  title="Zoom in"
+                  style={{ ...zoomBtnStyle }}
+                >
+                  +
+                </button>
+              </div>
+
               {pdf ? (
                 <VirtualPageList
                   ref={virtualListRef}
@@ -585,6 +677,7 @@ export default function BookViewer() {
                   initialPage={page}
                   containerWidth={containerWidth}
                   textSelectMode={textSelectMode}
+                  zoomLevel={zoomLevel}
                 />
               ) : (
                 !pdfError && (
@@ -671,6 +764,18 @@ export default function BookViewer() {
     </div>
   );
 }
+
+const zoomBtnStyle = {
+  border: 'none',
+  background: 'transparent',
+  color: 'var(--text)',
+  fontSize: 15,
+  fontWeight: 600,
+  cursor: 'pointer',
+  padding: '2px 6px',
+  lineHeight: 1,
+  borderRadius: 4,
+};
 
 const navButton = {
   border: '1px solid var(--border)',

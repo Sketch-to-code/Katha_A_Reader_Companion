@@ -201,38 +201,50 @@ export default function AIPanel({ documentId, selectedText, onClose }) {
         </button>
       </div>
 
-      {/* Passage Textarea: compact, resizable vertically only */}
-      <label
+      {/* Selected Passage Banner: single clean context pill instead of duplicate text box */}
+      <div
         style={{
           flexShrink: 0,
-          display: 'grid',
-          gap: 6,
-          padding: '10px 14px',
-          fontSize: 11.5,
-          color: 'var(--text-muted)',
+          padding: '8px 14px',
+          background: 'rgba(212, 180, 89, 0.08)',
           borderBottom: '1px solid var(--border)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          fontSize: 12,
         }}
       >
-        Passage from your PDF
-        <textarea
-          value={passage}
-          onChange={(event) => setPassage(event.target.value)}
-          placeholder="Paste a passage here to ground your questions in the book..."
-          rows={3}
-          style={{
-            width: '100%',
-            boxSizing: 'border-box',
-            resize: 'vertical',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--bg)',
-            color: 'var(--text)',
-            padding: '8px 10px',
-            font: 'inherit',
-            fontSize: 12.5,
-          }}
-        />
-      </label>
+        <span style={{ fontSize: 13, flexShrink: 0 }}>📖</span>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {passage.trim() ? (
+            <span style={{ color: 'var(--text)' }}>
+              <strong style={{ color: 'var(--accent)' }}>Selected:</strong> &ldquo;{passage.trim().slice(0, 60)}{passage.trim().length > 60 ? '…' : ''}&rdquo;
+            </span>
+          ) : (
+            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              Select text in the PDF to ground your questions
+            </span>
+          )}
+        </div>
+        {passage.trim() && (
+          <button
+            type="button"
+            onClick={() => setPassage('')}
+            title="Clear selected passage"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: 13,
+              padding: '2px 4px',
+              lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {/* Chat Messages: flex 1, scrolls independently */}
       <div
@@ -384,7 +396,7 @@ export default function AIPanel({ documentId, selectedText, onClose }) {
             onKeyDown={(event) => {
               if (event.key === 'Enter') sendQuestion();
             }}
-            placeholder="Ask a question about the whole book..."
+            placeholder={passage.trim() ? "Ask a question about this passage..." : "Ask a question about the book..."}
             style={{
               flex: 1,
               border: '1px solid var(--border)',
