@@ -2,33 +2,36 @@
 
 > Turn any PDF into an immersive, AI-assisted reading experience.
 
-Katha transforms static PDF documents — novels, textbooks, research papers — into an interactive, book-like reading experience. Read leisurely with continuous-scroll PDF rendering and ambient soundscapes, or switch to Academic Mode where an AI assistant summarizes, explains, and narrates content on demand.
+Katha transforms static PDF documents — textbooks, research papers, novels — into an interactive, book-like reading experience. Read leisurely with continuous-scroll HiDPI PDF rendering and ambient soundscapes, or switch to Academic Mode where an AI assistant summarizes, explains, and translates content on demand.
 
 ---
 
 ## ✨ Features
 
 ### Core Reading Experience
-- 📄 **PDF.js canvas rendering** — each page rendered precisely to canvas with real text selection; no iframes, no content clipping
-- 📜 **Continuous scroll** — scroll through all pages in one fluid view; page counter updates live as you scroll
-- ✎ **Text selection toggle** — switch between Scroll mode (two-finger scroll updates page counter) and Select text mode (highlight and copy PDF text)
-- 🖼️ **Auto-generated cover page** — automatically creates a cover with the document title when the source PDF doesn't have one
-- 🔖 **Bookmarks** — save and jump back to any page, persisted per user
-- 📝 **Notes** — attach written notes to specific pages or highlighted passages; selected text flows into AI panel automatically
-- ⏯️ **Resume reading** — automatically resumes from your last read page
-- 🎨 **Themes** — light / dark / sepia visual themes
-- 🎵 **Ambient soundscapes** — manually select background audio to set the mood while reading (plays only on explicit user action)
+- 📄 **HiDPI Canvas Rendering** — Renders canvases scaled to `window.devicePixelRatio` for razor-sharp typography and diagram clarity on high-DPI and Retina displays.
+- 📜 **Continuous Virtualized Scroll** — Scroll through all pages in one fluid view; intersection observers update the live page counter with zero lag.
+- ✎ **Continuous Text Selection** — Full integration with PDF.js `TextLayer` and official CSS custom variable chaining (`--total-scale-factor`), enabling continuous, smooth line highlighting (identical to Acrobat/Edge).
+- 🔍 **Interactive Zoom Controls** — In-reader `−`, `100% / Reset`, and `+` zoom controls (40%–200%) with horizontal panning support.
+- 🖼️ **Auto-Generated Cover Pages** — Factory method (`CoverFactory`) automatically extracts embedded PDF covers or dynamically generates an aesthetic cover if none is present.
+- 🔖 **Bookmarks** — Save, toggle, and jump back to any page with immediate database persistence per user.
+- 📝 **Notes with Context Capture** — Attach written notes to specific pages; highlighted PDF text automatically flows into note drafts.
+- ⏯️ **Resume Reading** — Automatically persists and resumes reading progress from your exact last-read page.
+- 🎨 **Visual Themes** — Light, Dark, and Warm Sepia themes with full color-token harmonization.
+- 🎵 **Ambient Soundscapes** — Web Audio soundscape engine (Rain Drip, Cafe Ambience, Deep Focus Noise, 40 Hz Binaural Beats, or Custom Audio upload) with volume controls (explicit user trigger — no autoplay).
 
 ### Reading Modes
-- 🌿 **Leisure Mode** — clean, distraction-free interface for novels and casual reading
-- 🎓 **Academic Mode** — keeps an AI assistant on standby for study material
-- 🎧 **Background Music** — choose Rain Drip, Cafe Ambience, Deep Focus Noise, 40 Hz Binaural Beats, Custom Audio upload, or Mute in Settings; audio never auto-plays on load
+- 🌿 **Leisure Mode** — Clean, distraction-free reading interface for casual reading and literature.
+- 🎓 **Academic Mode** — Docked two-column workspace pairing your document with an interactive AI study companion.
+- ⚡ **Dynamic Responsive Resizing** — Real-time `ResizeObserver` callback ref dynamically scales the PDF canvas to fit available width when toggling Academic Mode.
 
 ### AI Features (Academic Mode)
-- 🧠 **Summarize** — highlight any passage and get a concise AI-generated summary
-- 💡 **Explain Simply** — highlight dense or technical text and get a plain-language explanation
-- 🌐 **Translate** — translate selected text into Tamil, Spanish, French, Hindi, or Arabic
-- 🔊 **Narration** — prepare a passage with AI and play it using browser speech synthesis, with pause, resume, and stop controls
+- 🧠 **Summarize** — Instant, bulleted conceptual summaries grounded in selected text.
+- 💡 **Explain Simply** — Plain-language breakdowns with clear definitions of core software and academic terminology.
+- 🌐 **Google Neural Machine Translation** — Dedicated zero-config machine translation engine for Tamil, Hindi, Spanish, French, and Arabic.
+- 💬 **Unified Chatbot Interface** — Simplified single-input chat flow with an active context pill (`📖 Selected Passage`) and contextual document Q&A.
+- 🔊 **Narration** — Read-aloud narration powered by browser speech synthesis with Play, Pause, Resume, and Stop controls.
+- 🛡️ **Multi-Model Auto-Fallback** — Resilient AI architecture supporting free OpenRouter models (`nvidia/nemotron-3.5-super-vl:free`, `google/gemma-4-26b-a4b-it:free`) with graceful fallback.
 
 ---
 
@@ -36,20 +39,25 @@ Katha transforms static PDF documents — novels, textbooks, research papers —
 
 **Frontend**
 - React 18 (Vite)
-- [pdfjs-dist v6](https://mozilla.github.io/pdf.js/) — PDF canvas rendering, text-layer for real text selection, IntersectionObserver-based page tracking
-- Web Audio API — globally generated ambient background music (rain drip, cafe ambience, deep focus noise, 40 Hz binaural beats)
-- Axios
+- [pdfjs-dist v6](https://mozilla.github.io/pdf.js/) — Canvas rendering, TextLayer selection, `IntersectionObserver` page tracking
+- Web Audio API — Procedural ambient soundscapes and custom audio streaming
+- Axios with interceptor-based JWT management
 
 **Backend**
-- Node.js + Express
-- Supabase Postgres + Storage
-- JWT sessions with email verification
+- Node.js (v20+) + Express
+- Supabase (PostgreSQL + S3-compatible private PDF Storage)
+- JWT authentication with secure salt-hashed password and challenge verification
+- IPv4-first DNS resolution (`dns.setDefaultResultOrder('ipv4first')`) to prevent network hangs
 
-**AI Layer**
-- OpenRouter summarization, explanation, translation, narration preparation, and retrieval-augmented book chat via a secure backend proxy
+**AI & Translation Layer**
+- OpenRouter API (Free models with zero-reasoning direct formatting)
+- Google Neural Machine Translation API integration
+- Retrieval-Augmented Generation (RAG) for document-wide question answering
 
-**DevOps**
-- Docker + Docker Compose for local development
+**Quality & Testing**
+- Native Node.js test runner (`node --test`)
+- Stryker Mutator for mutation testing analysis
+- Docker + Docker Compose
 
 ---
 
@@ -57,34 +65,39 @@ Katha transforms static PDF documents — novels, textbooks, research papers —
 
 ```
 katha/
-├── frontend/                        # React app
-│   └── src/
-│       ├── components/
-│       │   ├── Reader/
-│       │   │   ├── BookViewer.jsx   # PDF.js canvas viewer + text layer + page counter
-│       │   │   ├── AIPanel.jsx      # AI assist panel (Study mode)
-│       │   │   ├── FlipbookRenderer.jsx  # Strategy: flipbook visual (mock pages)
-│       │   │   └── ScrollRenderer.jsx    # Strategy: scroll visual (mock pages)
-│       │   ├── Layout/
-│       │   ├── Auth/
-│       │   ├── Notes/
-│       │   └── Settings/
-│       ├── context/
-│       │   ├── BackgroundMusicContext.jsx  # Web Audio API soundscape engine
-│       │   ├── AuthContext.jsx
-│       │   └── ToastContext.jsx
-│       └── strategies/
-│           └── renderStrategies.jsx    # Strategy pattern: maps mode → renderer
+├── frontend/                        # React SPA
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Reader/
+│   │   │   │   ├── BookViewer.jsx   # HiDPI canvas viewer + text layer + zoom controls
+│   │   │   │   ├── AIPanel.jsx      # Unified single-input AI companion
+│   │   │   │   ├── FlipbookRenderer.jsx  # Strategy: flipbook renderer
+│   │   │   │   └── ScrollRenderer.jsx    # Strategy: continuous scroll renderer
+│   │   │   ├── Layout/
+│   │   │   │   └── Sidebar.jsx      # Collapsible navigation with vector SVG icons
+│   │   │   ├── Auth/
+│   │   │   ├── Notes/
+│   │   │   └── Settings/
+│   │   ├── context/
+│   │   │   ├── BackgroundMusicContext.jsx # Web Audio ambient soundscapes
+│   │   │   ├── AuthContext.jsx
+│   │   │   └── ToastContext.jsx
+│   │   └── strategies/
+│   │       └── renderStrategies.jsx # Strategy pattern: maps mode → renderer
+│   └── tests/
+│       └── ui.test.js               # Frontend unit test suite
 ├── backend/                         # Express API
 │   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── middleware/
-│   └── services/
-│       ├── aiProvider/              # Adapter pattern: OpenRouter / Mock LLM
-│       ├── events/                  # Observer: readingProgressEmitter
-│       ├── factories/               # Factory Method: CoverFactory, SoundscapeFactory
-│       └── AcademicModeFacade.js    # Facade: one call covers summarise/explain/translate
+│   ├── db/                          # Supabase client singleton & SQL schema
+│   ├── middleware/                  # JWT auth, rate limiter, error handler
+│   ├── services/
+│   │   ├── aiProvider/              # Adapter: OpenRouter, Google Translate, Mock LLM
+│   │   ├── events/                  # Observer: readingProgressEmitter
+│   │   ├── factories/               # Factory Method: CoverFactory, SoundscapeFactory
+│   │   └── AcademicModeFacade.js    # Facade: unified assist API
+│   ├── tests/                       # 66 backend unit & integration tests
+│   └── stryker.conf.json            # Mutation testing configuration
+├── Katha_SE_Presentation_Guide.md   # Software Engineering presentation guide
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -95,119 +108,106 @@ katha/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- Node.js 22+ (optional, only needed for non-Docker local dev)
-- A Supabase project with the backend service-role key
-- An OpenRouter API key for AI assistance and translations
+- Node.js 20+ installed
+- A free [Supabase](https://supabase.com) project
+- An [OpenRouter](https://openrouter.ai) API key (free tier supported)
 
-### Run with Docker (recommended)
+### Local Setup
 
 ```bash
-git clone <repository-url>
+# 1. Clone repository
+git clone https://github.com/Sketch-to-code/Katha_A_Reader_Companion.git
 cd katha
-cp backend/.env.example backend/.env
-# Configure Supabase, JWT, email, and AI settings in backend/.env.
-cp frontend/.env.example frontend/.env.local
-docker-compose up --build
+
+# 2. Configure Backend
+cd backend
+cp .env.example .env
+# Edit backend/.env with your Supabase, JWT, and OpenRouter credentials
+
+# 3. Install dependencies & run backend
+npm install
+npm run dev
+
+# 4. Configure & run Frontend (in a new terminal)
+cd ../frontend
+npm install
+npm run dev
 ```
 
 - Frontend: [http://localhost:3000](http://localhost:3000)
 - Backend API: [http://localhost:8081](http://localhost:8081)
 
-### Run without Docker
+---
+
+## 🧪 Testing & Quality Assurance
+
+Katha includes an automated test suite across the frontend and backend:
 
 ```bash
-# Backend
+# Run all backend unit & integration tests (66 tests)
 cd backend
-npm install
-npm run dev
+npm test
 
-# Frontend (new terminal)
+# Run frontend test suite (4 tests)
 cd frontend
-npm install
-npm run dev
+npm test
+
+# Run Stryker mutation testing
+cd backend
+npm run test:mutation
 ```
+
+### Test Coverage Highlights:
+- **Authentication & Security:** JWT verification, tamper detection, token expiry, bcrypt hashing.
+- **Service Layer:** `bookmarkService`, `noteService`, `CoverFactory`, `SoundscapeFactory`.
+- **AI & Translation:** `AcademicModeFacade`, `OpenRouterAdapter`, `googleTranslate`, RAG document search.
+- **Middleware:** `rateLimiter` (sliding window), `authMiddleware`.
+- **Events:** `readingProgressEmitter` (Observer singleton).
 
 ---
 
 ## 🧩 Environment Variables
 
-Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`. Configure the backend service credentials before using cloud features:
+Configure `backend/.env` with the following variables:
 
-| Variable | Description |
-|---|---|
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Backend-only key for Postgres and signed Storage URLs; never expose it in the frontend |
-| `RESEND_API_KEY` | Backend-only key used for login and activity notifications |
-| `RESEND_FROM_EMAIL` | Sender address verified with Resend |
-| `OPENROUTER_API_KEY` | Backend-only key used for AI |
-| `OPENROUTER_MODEL` | OpenRouter chat model identifier |
-| `JWT_SECRET` | Secret used to sign auth tokens |
-| `VITE_API_BASE_URL` | Backend URL used by the frontend |
-
----
-
-## 🧱 Software Design
-
-This repo implements the design from `Katha_DA2_Software_Design_Document.docx`: a layered client-server architecture (React SPA → Express API → service layer → Supabase) with an AI proxy boundary that keeps provider credentials off the client. Six GoF patterns are applied directly in the code:
-
-| Pattern | Where |
-|---|---|
-| Adapter | `backend/services/aiProvider/*Adapter.js` — vendor-specific LLM/TTS calls behind one `AIProvider` contract |
-| Facade | `backend/services/AcademicModeFacade.js` — one `assist(text, mode)` call instead of three services |
-| Strategy | `frontend/src/strategies/renderStrategies.jsx` — flipbook vs. scroll renderer, swapped at runtime |
-| Observer | `backend/services/events/readingProgressEmitter.js` and `frontend/src/context/ReadingEventContext.jsx` |
-| Factory Method | `backend/services/factories/CoverFactory.js`, `SoundscapeFactory.js` |
-| Singleton | `backend/db/connection.js` |
-
-All persisted account, document, note, bookmark, and login-challenge data use Supabase. There is no MongoDB or in-memory persistence fallback.
-
-AI uses OpenRouter when `USE_MOCK_AI=false`; set `OPENROUTER_API_KEY` in the backend environment to enable responses. The database and private file storage use Supabase, while mail notifications use Resend; follow the setup section below before using cloud features.
+| Variable | Description | Default / Example |
+|---|---|---|
+| `PORT` | Backend TCP listening port | `8081` |
+| `JWT_SECRET` | Secret key for signing session tokens (min 32 chars) | Random 64-char string |
+| `SUPABASE_URL` | Supabase project URL | `https://<ref>.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Backend service-role key (never expose to client) | Service key |
+| `PDF_BUCKET` | Supabase storage bucket name for PDFs | `pdf-documents` |
+| `OPENROUTER_API_KEY` | OpenRouter API Key | `sk-or-v1-...` |
+| `OPENROUTER_MODEL` | AI model identifier (supports 100% free models) | `nvidia/nemotron-3.5-super-vl:free` |
+| `USE_MOCK_AI` | Set to `false` for real AI, `true` for offline mock | `false` |
+| `USE_GOOGLE_TRANSLATE` | Set to `true` for Google Neural Translation | `true` |
+| `RESEND_API_KEY` | Resend email API key for login codes & session emails | `re_...` |
+| `RESEND_FROM_EMAIL` | Verified sender email | `Katha <onboarding@resend.dev>` |
 
 ---
 
-## 🗺️ Roadmap
+## 🧱 Software Engineering Design Patterns
 
-- [x] PDF upload + canvas rendering (PDF.js)
-- [x] Continuous scroll with live page counter (IntersectionObserver)
-- [x] Text selection mode toggle (scroll ↔ select)
-- [x] Resume from last read page
-- [x] Bookmarks & auto-cover generation
-- [x] Book- and page-associated notes with text highlight capture
-- [x] Leisure / Academic mode toggle
-- [x] AI summarize & explain
-- [x] Passage translation
-- [x] Global background music settings (explicit play only — no autoplay on load)
-- [x] Passage narration with pause / resume / stop
-- [x] OpenRouter retrieval-augmented PDF chat
-- [x] Email login verification and activity notifications
-- [ ] Docker Compose full stack
-- [ ] OCR support for scanned PDFs *(future)*
-- [ ] Read-along synced-highlight narration *(future)*
-- [ ] Offline/PWA support *(future)*
+Katha implements 6 classic Gang of Four (GoF) design patterns:
+
+| Pattern | Implementation Location | Architectural Role |
+|---|---|---|
+| **Adapter** | `backend/services/aiProvider/*` | Wraps heterogeneous AI vendors (OpenRouter, Google Translate, Mock LLM) behind a standard `AIProvider` contract. |
+| **Facade** | `backend/services/AcademicModeFacade.js` | Simplifies complex subsystem calls (summarize, explain, ask, translate, narrate) into a single unified `assist()` API. |
+| **Strategy** | `frontend/src/strategies/renderStrategies.jsx` | Encapsulates rendering algorithms (`ScrollRenderer` vs `FlipbookRenderer`), allowing dynamic runtime switching. |
+| **Observer** | `backend/services/events/readingProgressEmitter.js` | Decouples reading progress tracking and milestone events from database handlers. |
+| **Factory Method** | `backend/services/factories/CoverFactory.js`, `SoundscapeFactory.js` | Encapsulates instantiation logic for cover extractions and ambient audio tracks. |
+| **Singleton** | `backend/db/connection.js` | Enforces a single shared connection pool to Supabase PostgreSQL throughout the lifecycle. |
 
 ---
 
 ## 👥 Contributors
 
-- **ARJUN** — Backend (Express, Supabase, AI/TTS integration)
-- **ARUNADITYA RAGURAMAN** — Frontend (React, PDF.js, UI/UX)
+- **ARUNADITYA RAGURAMAN** — Frontend Architecture (React, PDF.js, UI/UX, HiDPI Canvas & Selection)
+- **ARJUN** — Backend Architecture (Express, Supabase, AI/TTS Integration, Design Patterns)
 
 ---
 
-## 📄 License
+## 📄 Academic Coursework
 
-This project is developed as part of an academic Software Engineering course assignment.
-
----
-
-## Supabase, Resend, and OpenRouter Setup
-
-1. In the Supabase dashboard, open **SQL Editor → New query**, paste all of `backend/db/supabase-schema.sql`, and run it. It creates the `users`, `documents`, `notes`, `bookmarks`, and `login_challenges` tables plus a private `pdf-documents` Storage bucket. The script does not drop or rename existing tables. `CREATE TABLE IF NOT EXISTS` will not alter a pre-existing incompatible table; the backend checks required columns at startup and refuses to serve requests with a clear error if they do not match. Do not drop/rename old `profiles`, `books`, `notes`, or `bookmarks` tables to silence a mismatch; inspect and back up the actual schema first.
-2. Copy `backend/.env.example` to `backend/.env`. Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `PDF_BUCKET` (normally `pdf-documents`) from your project settings/configuration. Keep the service-role key on the backend only; never put it in a `VITE_` variable, commit it, or share it.
-3. Set a unique, long random `JWT_SECRET` in `backend/.env`. The app uses its own API-issued JWTs; it does not use Supabase Auth for login or table policies.
-4. Configure Resend in `backend/.env` with `RESEND_API_KEY` and a sender address allowed by your Resend account. Email login codes cannot be delivered until this is configured. For real users, verify your sending domain with Resend.
-5. Copy `frontend/.env.example` to `frontend/.env.local` and set `VITE_API_BASE_URL` to the API URL (locally, `http://localhost:8081/api`). The browser uploads PDFs with short-lived signed URLs from the API; private PDF downloads are signed by the API too.
-6. Start the backend with `cd backend` then `npm install` and `npm run dev`; in another terminal start the frontend with `cd frontend` then `npm install` and `npm run dev`.
-
-Set `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` in the backend environment to enable the AI assistant. Book chat retrieves matching text from the current user's PDF before sending context to OpenRouter. Keep Supabase, Resend, OpenRouter, and JWT secrets server-side. The backend will not start unless Supabase schema and private Storage bucket checks pass.
+This project is developed as part of the **V Semester Software Engineering (DA3 / Review 3)** course curriculum at VIT University.
